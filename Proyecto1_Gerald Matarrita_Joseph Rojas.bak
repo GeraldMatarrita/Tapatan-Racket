@@ -1,1 +1,477 @@
+#|
+   El objetivo del juego es ser el primer jugador en alinear tres de sus fichas en una fila, ya sea de
+   forma horizontal, vertical o diagonal. El juego comienza con un tablero vacío. Cada jugador tiene tres
+   fichas, de diferentes colores, y en turnos alternos. Colocan una ficha en el tablero en un espacio vacío.
+   Una vez que todas las fichas se han colocado, los jugadores comienzan a mover sus fichas para intentar
+   alinearlas en una fila.
+   Los jugadores pueden mover sus fichas a un espacio adyacente vacío en cualquier dirección: horizontal,
+   vertical o diagonal.
+   El juego continúa hasta que uno de los jugadores alinea tres de sus fichas en una fila, momento en el
+   que ese jugador es declarado ganador.
+
+   Para ejecutar el juego, se debe llamar a la funcion: (tapatan)
+|#
+
+
 #lang racket
+
+(require 2htdp/universe)
+(require 2htdp/image)
+(require lang/posn)
+(require racket/bool)
+
+#|
+   Se definen las posibles imagenes del tablero a mostrar
+|#
+(define FONDO-ROJO   .)
+(define FONDO-AZUL   .)
+(define GANADOR-ROJO .)
+(define GANADOR-AZUL .)
+(define FONDO-INICIAL .)
+
+#|
+   Estructura que representa una posicion en el tablero. Tiene como atributos: su posicion en 'x',
+   su posicion en 'y', un booleano llamado 'ocupado' que indica si la posicion esta ocupada y 'color'
+   que indica que color de jugador es que ocupa dicha posicion.
+|#
+(struct posicion (x y ocupado color) #:mutable)
+
+; Se crean las 9 posiciones respectivas a un tablero con los valores predeterminados para poder empezar el juego.
+(define posicion1 (posicion 11 10 #f ""))
+(define posicion2 (posicion 115 10 #f ""))
+(define posicion3 (posicion 218 10 #f ""))
+(define posicion4 (posicion 11 110 #f ""))
+(define posicion5 (posicion 115 110 #f ""))
+(define posicion6 (posicion 218 110 #f ""))
+(define posicion7 (posicion 11 209 #f ""))
+(define posicion8 (posicion 115 209 #f ""))
+(define posicion9 (posicion 218 209 #f ""))
+
+
+#|
+   Estructura de representa un tablero. Tiene como atributos las 9 posiciones, 'color-jugador' que indica
+   el color del jugador en turno, 'fichas-colocadas' que indica el numero de fichas que se han colocado en
+   el tablero, 'lista-rojas' que indica los numeros de las posiciones que estan ocupadas por el jugador de
+   color rojo, 'lista-azules' que cumple la misma funcioon que 'lista-rojas' pero para el jugador de color
+   azul, 'ganador' que indica, cuando haya un ganador, el color del jugador ganador y posicion-cambiar que
+   almacenara la posicion de la ficha, que el jugador en turno, desea mover en caso de que ya se
+   hayan colocado todas la fichas. Además se cuenta con un atributo, booleano, llamado 'iniciado' que
+   indica si se debe mostrar la pantalla inicial o no.
+|#
+(struct tablero (pos1 pos2 pos3 pos4 pos5 pos6 pos7 pos8 pos9 fichas-colocadas color-jugador lista-rojas lista-azules ganador posicion-cambiar iniciado) #:mutable)
+
+; Se crea el tablero con los valores predeterminados para poder empezar el juego.
+(define mi-tablero (tablero posicion1 posicion2 posicion3 posicion4 posicion5 posicion6 posicion7 posicion8 posicion9 0 "red" (list) (list) "" "0" #f))
+
+
+#|
+   Se define la funcion que se encargara de dibujar las fichas que se mostraran en el tablero. En caso de
+   que no hayan fichas colocadas, se muestra el tablero vacio, inciando con el turno del jugador rojo.
+   En caso de que si hayan fichas colocadas, se procedes a dibujar las fichas.
+   Entradas: El tablero
+   Salidas: Interfaz grafica
+|#
+(define (dibujar-tablero tab)
+  (if (eq? (tablero-iniciado tab) #f) (place-image FONDO-INICIAL 115 110 FONDO-INICIAL) (dibujar-tablero-aux tab)))
+
+
+#|
+   Se define la funcion auxiliar de dibujar el tablero. Se define una lista de los circulos a dibujar en
+   cada posicion. Si la posicion no esta ocupada se agrega un circulo blanco practicamente invisible en
+   el tablero. Si la posicion esta ocupada se agrega el circulo con el color correspondiente al jugador
+   en turno.
+   Luego, se pasa la lista como parametro, así como una nueva lista con las posiciones, en coordenadas x y,
+   de las correspondientes posiciones. Ademas, como tercer parametro se pasa la imagen de fondo a utilizar
+   para el tablero. Si el ganador en la estructura del tablero, es rojo se imprime la imagen del ganador
+   rojo y si es azul se imprime la imagen del ganador azul. En caso de que no haya ganador, se imprime la
+   imagen del turno del jugador en turno.
+   Entradas: El tablero
+   Salidas: Interfaz grafica
+|#
+(define (dibujar-tablero-aux tab) (define lista-circulos (list))
+  (if (false? (posicion-ocupado (tablero-pos1 tab))) (set! lista-circulos(append lista-circulos (list(circle 1 "solid" "white"))))
+      (set! lista-circulos (append lista-circulos (list(circle 10 "solid" (posicion-color (tablero-pos1 tab)))))))
+  (if (false? (posicion-ocupado (tablero-pos2 tab))) (set! lista-circulos(append lista-circulos (list(circle 1 "solid" "white"))))
+      (set! lista-circulos (append lista-circulos (list(circle 10 "solid" (posicion-color (tablero-pos2 tab)))))))
+  (if (false? (posicion-ocupado (tablero-pos3 tab))) (set! lista-circulos(append lista-circulos (list(circle 1 "solid" "white"))))
+      (set! lista-circulos (append lista-circulos (list(circle 10 "solid" (posicion-color (tablero-pos3 tab)))))))
+  (if (false? (posicion-ocupado (tablero-pos4 tab))) (set! lista-circulos(append lista-circulos (list(circle 1 "solid" "white"))))
+      (set! lista-circulos (append lista-circulos (list(circle 10 "solid" (posicion-color (tablero-pos4 tab)))))))
+  (if (false? (posicion-ocupado (tablero-pos5 tab))) (set! lista-circulos(append lista-circulos (list(circle 1 "solid" "white"))))
+      (set! lista-circulos (append lista-circulos (list(circle 10 "solid" (posicion-color (tablero-pos5 tab)))))))
+  (if (false? (posicion-ocupado (tablero-pos6 tab))) (set! lista-circulos(append lista-circulos (list(circle 1 "solid" "white"))))
+      (set! lista-circulos (append lista-circulos (list(circle 10 "solid" (posicion-color (tablero-pos6 tab)))))))
+  (if (false? (posicion-ocupado (tablero-pos7 tab))) (set! lista-circulos(append lista-circulos (list(circle 1 "solid" "white"))))
+      (set! lista-circulos (append lista-circulos (list(circle 10 "solid" (posicion-color (tablero-pos7 tab)))))))
+  (if (false? (posicion-ocupado (tablero-pos8 tab))) (set! lista-circulos(append lista-circulos (list(circle 1 "solid" "white"))))
+      (set! lista-circulos (append lista-circulos (list(circle 10 "solid" (posicion-color (tablero-pos8 tab)))))))
+  (if (false? (posicion-ocupado (tablero-pos9 tab))) (set! lista-circulos(append lista-circulos (list(circle 1 "solid" "white"))))
+      (set! lista-circulos (append lista-circulos (list(circle 10 "solid" (posicion-color (tablero-pos9 tab)))))))
+  (place-images lista-circulos
+                (list (make-posn (posicion-x (tablero-pos1 tab)) (posicion-y (tablero-pos1 tab)))
+                      (make-posn (posicion-x (tablero-pos2 tab)) (posicion-y (tablero-pos2 tab)))
+                      (make-posn (posicion-x (tablero-pos3 tab)) (posicion-y (tablero-pos3 tab)))
+                      (make-posn (posicion-x (tablero-pos4 tab)) (posicion-y (tablero-pos4 tab)))
+                      (make-posn (posicion-x (tablero-pos5 tab)) (posicion-y (tablero-pos5 tab)))
+                      (make-posn (posicion-x (tablero-pos6 tab)) (posicion-y (tablero-pos6 tab)))
+                      (make-posn (posicion-x (tablero-pos7 tab)) (posicion-y (tablero-pos7 tab)))
+                      (make-posn (posicion-x (tablero-pos8 tab)) (posicion-y (tablero-pos8 tab)))
+                      (make-posn (posicion-x (tablero-pos9 tab)) (posicion-y (tablero-pos9 tab)))
+                      ) (cond [(string=? (tablero-ganador tab) "red") GANADOR-ROJO]
+                              [(string=? (tablero-ganador tab) "blue") GANADOR-AZUL]
+                              [(string=? (tablero-color-jugador tab) "red") FONDO-ROJO]
+                              [(string=? (tablero-color-jugador tab) "blue") FONDO-AZUL])))
+
+
+#|
+   Se define la funcion para actualizar las posiciones cuando se estan colocando las fichas inicialmente.
+   Se actualiza el estado de ocupado a verdadero y se asigna el color del jugador que tiene una ficha en
+   la respectiva posicion.
+   Ademas, se actualiza el tablero. Se actualiza el color del jugador que jugara el siguiente turno,
+   se actualiza la lista de las posiciones donde el jugador tiene fichas y se incrementa en uno la
+   cantidad de fichas colocadas en el tablero.
+   Entradas: Posicion seleccionada, numero de la posicion, color del jugador en turno y el tablero
+   Salidas: El tablero actualizado
+|#
+(define (actualizar-posicion pos num-pos color tab)
+  (set-posicion-ocupado! pos #t)
+  (set-posicion-color! pos color)
+  (if (string=? color "red") (set-tablero-color-jugador! tab "blue") (set-tablero-color-jugador! tab "red"))
+  (if (string=? color "red") (set-tablero-lista-rojas! tab (append (tablero-lista-rojas tab) (list num-pos)))
+      (set-tablero-lista-azules! tab (append (tablero-lista-azules tab) (list num-pos))))
+  (set-tablero-fichas-colocadas! tab (+ (tablero-fichas-colocadas tab) 1))
+  tab
+  )
+
+
+#|
+   Se define la funcion que encuentra una posicion del tablero, dependiento del numero de posicion.
+   Entradas: El tablero, string con el numero de la posicion a buscar
+   Salidas: La posicion a buscar
+|#
+
+(define (encontrar-posicion tab numero-posicion) (cond [(string=? numero-posicion "1") (tablero-pos1 tab)]
+                                                   [(string=? numero-posicion "2") (tablero-pos2 tab)]
+                                                   [(string=? numero-posicion "3") (tablero-pos3 tab)]
+                                                   [(string=? numero-posicion "4") (tablero-pos4 tab)]
+                                                   [(string=? numero-posicion "5") (tablero-pos5 tab)]
+                                                   [(string=? numero-posicion "6") (tablero-pos6 tab)]
+                                                   [(string=? numero-posicion "7") (tablero-pos7 tab)]
+                                                   [(string=? numero-posicion "8") (tablero-pos8 tab)]
+                                                   [(string=? numero-posicion "9") (tablero-pos9 tab)]))
+
+
+#|
+   Se define la funcion pasa un string que incluye un numero a su numero correspondiente.
+   Entradas: String con el numero
+   Salidas: El numero
+|#
+(define (string-numero string) (cond [(string=? string "1") 1]
+                                     [(string=? string "2") 2]
+                                     [(string=? string "3") 3]
+                                     [(string=? string "4") 4]
+                                     [(string=? string "5") 5]
+                                     [(string=? string "6") 6]
+                                     [(string=? string "7") 7]
+                                     [(string=? string "8") 8]
+                                     [(string=? string "9") 9]))
+
+
+#|
+   Se define la funcion para verificar si una ficha colocada en cierta posicion tiene alguna posicion
+   a la que se pueda mover.
+   Entradas: El tablero y el numero de la ficha a verificar
+   Salidas: Booleano que representa si se puede mover la ficha
+|#
+(define (se-puede-mover tab k) (cond [(string=? k "1")(or (eq? (posicion-ocupado (tablero-pos2 tab)) #f)
+                                                          (eq? (posicion-ocupado (tablero-pos4 tab)) #f)
+                                                          (eq? (posicion-ocupado (tablero-pos5 tab)) #f))]
+                                     [(string=? k "2")(or (eq? (posicion-ocupado (tablero-pos1 tab)) #f)
+                                                          (eq? (posicion-ocupado (tablero-pos3 tab)) #f)
+                                                          (eq? (posicion-ocupado (tablero-pos5 tab)) #f))]
+                                     [(string=? k "3")(or (eq? (posicion-ocupado (tablero-pos2 tab)) #f)
+                                                          (eq? (posicion-ocupado (tablero-pos5 tab)) #f)
+                                                          (eq? (posicion-ocupado (tablero-pos6 tab)) #f))]
+                                     [(string=? k "4")(or (eq? (posicion-ocupado (tablero-pos1 tab)) #f)
+                                                          (eq? (posicion-ocupado (tablero-pos5 tab)) #f)
+                                                          (eq? (posicion-ocupado (tablero-pos7 tab)) #f))]
+                                     [(string=? k "5")(or (eq? (posicion-ocupado (tablero-pos1 tab)) #f)
+                                                          (eq? (posicion-ocupado (tablero-pos2 tab)) #f)
+                                                          (eq? (posicion-ocupado (tablero-pos3 tab)) #f)
+                                                          (eq? (posicion-ocupado (tablero-pos4 tab)) #f)
+                                                          (eq? (posicion-ocupado (tablero-pos6 tab)) #f)
+                                                          (eq? (posicion-ocupado (tablero-pos7 tab)) #f)
+                                                          (eq? (posicion-ocupado (tablero-pos8 tab)) #f)
+                                                          (eq? (posicion-ocupado (tablero-pos9 tab)) #f))]
+                                     [(string=? k "6")(or (eq? (posicion-ocupado (tablero-pos3 tab)) #f)
+                                                          (eq? (posicion-ocupado (tablero-pos5 tab)) #f)
+                                                          (eq? (posicion-ocupado (tablero-pos9 tab)) #f))]
+                                     [(string=? k "7")(or (eq? (posicion-ocupado (tablero-pos4 tab)) #f)
+                                                          (eq? (posicion-ocupado (tablero-pos5 tab)) #f)
+                                                          (eq? (posicion-ocupado (tablero-pos8 tab)) #f))]
+                                     [(string=? k "8")(or (eq? (posicion-ocupado (tablero-pos7 tab)) #f)
+                                                          (eq? (posicion-ocupado (tablero-pos5 tab)) #f)
+                                                          (eq? (posicion-ocupado (tablero-pos9 tab)) #f))]
+                                     [(string=? k "9")(or (eq? (posicion-ocupado (tablero-pos5 tab)) #f)
+                                                          (eq? (posicion-ocupado (tablero-pos6 tab)) #f)
+                                                          (eq? (posicion-ocupado (tablero-pos8 tab)) #f))]))
+
+#|
+   Se define la funcion que verifica si una lista posee los mismos elementos que otra lista.
+   Entradas: Dos listas 
+   Salidas: Booleano que representa si tienen los mismos elementos
+|#
+(define (mismos-elementos? list1 list2) (equal? (sort list1 <) (sort list2 <))) 
+
+#|
+   Se define la funcion que verifica si un jugador cuenta con sus tres fichas en las posiciones
+   definidas para ser ganador. Si el jugador es ganador, se actualiza el tablero con el ganador
+   y se procede a dibujar el tablero.
+   Entradas: El tablero
+   Salidas: El tablero actualizado
+|#
+(define (verificar-ganador tab) (cond
+                                  [(or (mismos-elementos? '(1 2 3) (tablero-lista-rojas tab))
+                                       (mismos-elementos? '(4 5 6) (tablero-lista-rojas tab))
+                                       (mismos-elementos? '(7 8 9) (tablero-lista-rojas tab))
+                                       (mismos-elementos? '(1 4 7) (tablero-lista-rojas tab))
+                                       (mismos-elementos? '(2 5 8) (tablero-lista-rojas tab))
+                                       (mismos-elementos? '(3 6 9) (tablero-lista-rojas tab))
+                                       (mismos-elementos? '(1 5 9) (tablero-lista-rojas tab))
+                                       (mismos-elementos? '(3 5 7) (tablero-lista-rojas tab))
+                                       )(begin (set-tablero-ganador! tab "red") (dibujar-tablero tab))]
+                                  [(or (mismos-elementos? '(1 2 3) (tablero-lista-azules tab))
+                                       (mismos-elementos? '(4 5 6) (tablero-lista-azules tab))
+                                       (mismos-elementos? '(7 8 9) (tablero-lista-azules tab))
+                                       (mismos-elementos? '(1 4 7) (tablero-lista-azules tab))
+                                       (mismos-elementos? '(2 5 8) (tablero-lista-azules tab))
+                                       (mismos-elementos? '(3 6 9) (tablero-lista-azules tab))
+                                       (mismos-elementos? '(1 5 9) (tablero-lista-azules tab))
+                                       (mismos-elementos? '(3 5 7) (tablero-lista-azules tab))
+                                       )(begin (set-tablero-ganador! tab "blue") (dibujar-tablero tab))]))
+
+#|
+   Se define la funcion que verifica si en el tablero hay un ganador.
+   Entradas: El tablero
+   Salidas: Booleano que representa si el ganador del tablero es diferente del valor predeterminado
+|#
+(define (hay-ganador? tab)
+  (not (string=? (tablero-ganador tab) "")))
+
+#|
+   Se define la funcion para jugar colocando las fichas. Se verifica si la posicion donde se desea colocar
+   la ficha no esta ocupada. Si no lo esta se actualiza la posicion, sino se mantiene el tablero
+   tal como esta. Esto ultimo tambien sucede si la tecla no es una de las validas.
+   Entradas: El tablero y la poscion donde se coloca la ficha
+   Salidas: El tablero actualizado
+|#
+(define (jugar-colocar tab k)
+  (cond
+    [(key=? k "1") (if (false? (posicion-ocupado (tablero-pos1 tab)))
+                       (actualizar-posicion (encontrar-posicion tab k) (string-numero k) (tablero-color-jugador tab) tab) tab)]
+    [(key=? k "2") (if (false? (posicion-ocupado (tablero-pos2 tab)))
+                       (actualizar-posicion (encontrar-posicion tab k) (string-numero k) (tablero-color-jugador tab) tab) tab)]
+    [(key=? k "3") (if (false? (posicion-ocupado (tablero-pos3 tab)))
+                       (actualizar-posicion (encontrar-posicion tab k) (string-numero k) (tablero-color-jugador tab) tab) tab)]
+    [(key=? k "4") (if (false? (posicion-ocupado (tablero-pos4 tab)))
+                       (actualizar-posicion (encontrar-posicion tab k) (string-numero k) (tablero-color-jugador tab) tab) tab)]
+    [(key=? k "5") (if (false? (posicion-ocupado (tablero-pos5 tab)))
+                       (actualizar-posicion (encontrar-posicion tab k) (string-numero k) (tablero-color-jugador tab) tab) tab)]
+    [(key=? k "6") (if (false? (posicion-ocupado (tablero-pos6 tab)))
+                       (actualizar-posicion (encontrar-posicion tab k) (string-numero k) (tablero-color-jugador tab) tab) tab)]
+    [(key=? k "7") (if (false? (posicion-ocupado (tablero-pos7 tab)))
+                       (actualizar-posicion (encontrar-posicion tab k) (string-numero k) (tablero-color-jugador tab) tab) tab)]
+    [(key=? k "8") (if (false? (posicion-ocupado (tablero-pos8 tab)))
+                       (actualizar-posicion (encontrar-posicion tab k) (string-numero k) (tablero-color-jugador tab) tab) tab)]
+    [(key=? k "9") (if (false? (posicion-ocupado (tablero-pos9 tab)))
+                       (actualizar-posicion (encontrar-posicion tab k) (string-numero k) (tablero-color-jugador tab) tab) tab)]
+    [else tab]))
+
+
+#|
+   Se define la funcion para jugar con todas las fichas ya colocadas. Si la 'posicion-cambiar' almacenada
+   en el tablero es diferente al valor predeterminado, se procede a verificar la posicion seleccionada
+   si la posicion donde se desea quitar la ficha le pertenece al jugador y que dicha ficha tenga posiciones
+   a las que se pueda mover. Si es asi se almacena el valor, que representa la posicion actual de la ficha,
+   en 'posicion-cambiar'.
+   En caso de que la 'posicion-cambiar' sea diferente del valor predeterminado, se procede a validar que
+   la posicion seleccionada como destino sea una posicion valida y que no este ya ocupada. En caso de que
+   se cumplan las condiciones se actualiza la posicion como ocupada, se actualiza el color del jugador
+   que coloca la ficha, se actualiza la lista de posiciones, en el tablero, correspondiente y se actualiza
+   la 'posicion-cambiar' a su valor por defecto. En caso de que alguna de todas las condiciones no se cumpla
+   el tablero se mantiene tal y como estaba.
+   Entradas: El tablero y la tecla (Posicion origen o posicion destino)
+   Salidas: El tablero actualizado
+|#
+
+(define (jugar-normal tab k)
+  (verificar-ganador tab)
+  (if (string=? (tablero-posicion-cambiar tab) "0")
+        (cond
+          [(and (string=? k "1") (string=? (posicion-color (tablero-pos1 tab)) (tablero-color-jugador tab)) (se-puede-mover tab k))
+           (begin (set-posicion-color! (tablero-pos1 tab) "") (set-posicion-ocupado! (tablero-pos1 tab) #f) (set-tablero-posicion-cambiar! tab k))]
+          [(and (string=? k "2") (string=? (posicion-color (tablero-pos2 tab)) (tablero-color-jugador tab)) (se-puede-mover tab k))
+           (begin (set-posicion-color! (tablero-pos2 tab) "") (set-posicion-ocupado! (tablero-pos2 tab) #f) (set-tablero-posicion-cambiar! tab k))]
+          [(and (string=? k "3") (string=? (posicion-color (tablero-pos3 tab)) (tablero-color-jugador tab)) (se-puede-mover tab k))
+           (begin (set-posicion-color! (tablero-pos3 tab) "") (set-posicion-ocupado! (tablero-pos3 tab) #f) (set-tablero-posicion-cambiar! tab k))]
+          [(and (string=? k "4") (string=? (posicion-color (tablero-pos4 tab)) (tablero-color-jugador tab)) (se-puede-mover tab k) )
+           (begin (set-posicion-color! (tablero-pos4 tab) "") (set-posicion-ocupado! (tablero-pos4 tab) #f) (set-tablero-posicion-cambiar! tab k))]
+          [(and (string=? k "5") (string=? (posicion-color (tablero-pos5 tab)) (tablero-color-jugador tab)) (se-puede-mover tab k))
+           (begin (set-posicion-color! (tablero-pos5 tab) "") (set-posicion-ocupado! (tablero-pos5 tab) #f) (set-tablero-posicion-cambiar! tab k))]
+          [(and (string=? k "6") (string=? (posicion-color (tablero-pos6 tab)) (tablero-color-jugador tab)) (se-puede-mover tab k))
+           (begin (set-posicion-color! (tablero-pos6 tab) "") (set-posicion-ocupado! (tablero-pos6 tab) #f) (set-tablero-posicion-cambiar! tab k))]
+          [(and (string=? k "7") (string=? (posicion-color (tablero-pos7 tab)) (tablero-color-jugador tab)) (se-puede-mover tab k))
+           (begin (set-posicion-color! (tablero-pos7 tab) "") (set-posicion-ocupado! (tablero-pos7 tab) #f) (set-tablero-posicion-cambiar! tab k))]
+          [(and (string=? k "8") (string=? (posicion-color (tablero-pos8 tab)) (tablero-color-jugador tab)) (se-puede-mover tab k))
+           (begin (set-posicion-color! (tablero-pos8 tab) "") (set-posicion-ocupado! (tablero-pos8 tab) #f) (set-tablero-posicion-cambiar! tab k))]
+          [(and (string=? k "9") (string=? (posicion-color (tablero-pos9 tab)) (tablero-color-jugador tab)) (se-puede-mover tab k))
+           (begin (set-posicion-color! (tablero-pos9 tab) "") (set-posicion-ocupado! (tablero-pos9 tab) #f) (set-tablero-posicion-cambiar! tab k))]
+          [else tab])
+        (cond
+          [(and (string=? (tablero-posicion-cambiar tab) "1") (member k '("2" "4" "5")) (eq? (posicion-ocupado (encontrar-posicion tab k)) #f))
+           (begin (set-posicion-ocupado! (encontrar-posicion tab k) #t)
+                  (set-posicion-color! (encontrar-posicion tab k) (tablero-color-jugador tab))
+                  (if (string=? (tablero-color-jugador tab) "red")
+                      (set-tablero-lista-rojas! tab (remove (string-numero (tablero-posicion-cambiar tab)) (tablero-lista-rojas tab)))
+                      (set-tablero-lista-azules! tab (remove (string-numero (tablero-posicion-cambiar tab)) (tablero-lista-azules tab))))
+                  (if (string=? (tablero-color-jugador tab) "red")
+                      (set-tablero-lista-rojas! tab (cons (string-numero k) (tablero-lista-rojas tab)))
+                      (set-tablero-lista-azules! tab (cons (string-numero k) (tablero-lista-azules tab))))
+                  (if (string=? (tablero-color-jugador tab) "red")
+                      (set-tablero-color-jugador! tab "blue") (set-tablero-color-jugador! tab "red"))
+                  (set-tablero-posicion-cambiar! tab "0"))]
+          [(and (string=? (tablero-posicion-cambiar tab) "2") (member k '("1" "3" "5")) (eq? (posicion-ocupado (encontrar-posicion tab k)) #f))
+           (begin (set-posicion-ocupado! (encontrar-posicion tab k) #t)
+                  (set-posicion-color! (encontrar-posicion tab k) (tablero-color-jugador tab))
+                  (if (string=? (tablero-color-jugador tab) "red")
+                      (set-tablero-lista-rojas! tab (remove (string-numero (tablero-posicion-cambiar tab)) (tablero-lista-rojas tab)))
+                      (set-tablero-lista-azules! tab (remove (string-numero (tablero-posicion-cambiar tab)) (tablero-lista-azules tab))))
+                  (if (string=? (tablero-color-jugador tab) "red")
+                      (set-tablero-lista-rojas! tab (cons (string-numero k) (tablero-lista-rojas tab)))
+                      (set-tablero-lista-azules! tab (cons (string-numero k) (tablero-lista-azules tab))))
+                  (if (string=? (tablero-color-jugador tab) "red")
+                      (set-tablero-color-jugador! tab "blue") (set-tablero-color-jugador! tab "red"))
+                  (set-tablero-posicion-cambiar! tab "0"))]
+          [(and (string=? (tablero-posicion-cambiar tab) "3") (member k '("2" "5" "6")) (eq? (posicion-ocupado (encontrar-posicion tab k)) #f))
+           (begin (set-posicion-ocupado! (encontrar-posicion tab k) #t)
+                  (set-posicion-color! (encontrar-posicion tab k) (tablero-color-jugador tab))
+                  (if (string=? (tablero-color-jugador tab) "red")
+                      (set-tablero-lista-rojas! tab (remove (string-numero (tablero-posicion-cambiar tab)) (tablero-lista-rojas tab)))
+                      (set-tablero-lista-azules! tab (remove (string-numero (tablero-posicion-cambiar tab)) (tablero-lista-azules tab))))
+                  (if (string=? (tablero-color-jugador tab) "red")
+                      (set-tablero-lista-rojas! tab (cons (string-numero k) (tablero-lista-rojas tab)))
+                      (set-tablero-lista-azules! tab (cons (string-numero k) (tablero-lista-azules tab))))
+                  (if (string=? (tablero-color-jugador tab) "red")
+                      (set-tablero-color-jugador! tab "blue") (set-tablero-color-jugador! tab "red"))
+                  (set-tablero-posicion-cambiar! tab "0"))]
+          [(and (string=? (tablero-posicion-cambiar tab) "4") (member k '("1" "5" "7")) (eq? (posicion-ocupado (encontrar-posicion tab k)) #f))
+           (begin (set-posicion-ocupado! (encontrar-posicion tab k) #t)
+                  (set-posicion-color! (encontrar-posicion tab k) (tablero-color-jugador tab))
+                  (if (string=? (tablero-color-jugador tab) "red")
+                      (set-tablero-lista-rojas! tab (remove (string-numero (tablero-posicion-cambiar tab)) (tablero-lista-rojas tab)))
+                      (set-tablero-lista-azules! tab (remove (string-numero (tablero-posicion-cambiar tab)) (tablero-lista-azules tab))))
+                  (if (string=? (tablero-color-jugador tab) "red")
+                      (set-tablero-lista-rojas! tab (cons (string-numero k) (tablero-lista-rojas tab)))
+                      (set-tablero-lista-azules! tab (cons (string-numero k) (tablero-lista-azules tab))))
+                  (if (string=? (tablero-color-jugador tab) "red")
+                      (set-tablero-color-jugador! tab "blue") (set-tablero-color-jugador! tab "red"))
+                  (set-tablero-posicion-cambiar! tab "0"))]
+          [(and (string=? (tablero-posicion-cambiar tab) "5") (member k '("1" "2" "3" "4" "6" "7" "8" "9")) (eq? (posicion-ocupado (encontrar-posicion tab k)) #f))
+           (begin (set-posicion-ocupado! (encontrar-posicion tab k) #t)
+                  (set-posicion-color! (encontrar-posicion tab k) (tablero-color-jugador tab))
+                  (if (string=? (tablero-color-jugador tab) "red")
+                      (set-tablero-lista-rojas! tab (remove (string-numero (tablero-posicion-cambiar tab)) (tablero-lista-rojas tab)))
+                      (set-tablero-lista-azules! tab (remove (string-numero (tablero-posicion-cambiar tab)) (tablero-lista-azules tab))))
+                  (if (string=? (tablero-color-jugador tab) "red")
+                      (set-tablero-lista-rojas! tab (cons (string-numero k) (tablero-lista-rojas tab)))
+                      (set-tablero-lista-azules! tab (cons (string-numero k) (tablero-lista-azules tab))))
+                  (if (string=? (tablero-color-jugador tab) "red")
+                      (set-tablero-color-jugador! tab "blue") (set-tablero-color-jugador! tab "red"))
+                  (set-tablero-posicion-cambiar! tab "0"))]
+          [(and (string=? (tablero-posicion-cambiar tab) "6") (member k '("3" "5" "9")) (eq? (posicion-ocupado (encontrar-posicion tab k)) #f))
+           (begin (set-posicion-ocupado! (encontrar-posicion tab k) #t)
+                  (set-posicion-color! (encontrar-posicion tab k) (tablero-color-jugador tab))
+                  (if (string=? (tablero-color-jugador tab) "red")
+                      (set-tablero-lista-rojas! tab (remove (string-numero (tablero-posicion-cambiar tab)) (tablero-lista-rojas tab)))
+                      (set-tablero-lista-azules! tab (remove (string-numero (tablero-posicion-cambiar tab)) (tablero-lista-azules tab))))
+                  (if (string=? (tablero-color-jugador tab) "red")
+                      (set-tablero-lista-rojas! tab (cons (string-numero k) (tablero-lista-rojas tab)))
+                      (set-tablero-lista-azules! tab (cons (string-numero k) (tablero-lista-azules tab))))
+                  (if (string=? (tablero-color-jugador tab) "red")
+                      (set-tablero-color-jugador! tab "blue") (set-tablero-color-jugador! tab "red"))
+                  (set-tablero-posicion-cambiar! tab "0"))]
+          [(and (string=? (tablero-posicion-cambiar tab) "7") (member k '("4" "5" "8")) (eq? (posicion-ocupado (encontrar-posicion tab k)) #f))
+           (begin (set-posicion-ocupado! (encontrar-posicion tab k) #t)
+                  (set-posicion-color! (encontrar-posicion tab k) (tablero-color-jugador tab))
+                  (if (string=? (tablero-color-jugador tab) "red")
+                      (set-tablero-lista-rojas! tab (remove (string-numero (tablero-posicion-cambiar tab)) (tablero-lista-rojas tab)))
+                      (set-tablero-lista-azules! tab (remove (string-numero (tablero-posicion-cambiar tab)) (tablero-lista-azules tab))))
+                  (if (string=? (tablero-color-jugador tab) "red")
+                      (set-tablero-lista-rojas! tab (cons (string-numero k) (tablero-lista-rojas tab)))
+                      (set-tablero-lista-azules! tab (cons (string-numero k) (tablero-lista-azules tab))))
+                  (if (string=? (tablero-color-jugador tab) "red")
+                      (set-tablero-color-jugador! tab "blue") (set-tablero-color-jugador! tab "red"))
+                  (set-tablero-posicion-cambiar! tab "0"))]
+          [(and (string=? (tablero-posicion-cambiar tab) "8") (member k '("7" "5" "9")) (eq? (posicion-ocupado (encontrar-posicion tab k)) #f))
+           (begin (set-posicion-ocupado! (encontrar-posicion tab k) #t)
+                  (set-posicion-color! (encontrar-posicion tab k) (tablero-color-jugador tab))
+                  (if (string=? (tablero-color-jugador tab) "red")
+                      (set-tablero-lista-rojas! tab (remove (string-numero (tablero-posicion-cambiar tab)) (tablero-lista-rojas tab)))
+                      (set-tablero-lista-azules! tab (remove (string-numero (tablero-posicion-cambiar tab)) (tablero-lista-azules tab))))
+                  (if (string=? (tablero-color-jugador tab) "red")
+                      (set-tablero-lista-rojas! tab (cons (string-numero k) (tablero-lista-rojas tab)))
+                      (set-tablero-lista-azules! tab (cons (string-numero k) (tablero-lista-azules tab))))
+                  (if (string=? (tablero-color-jugador tab) "red")
+                      (set-tablero-color-jugador! tab "blue") (set-tablero-color-jugador! tab "red"))
+                  (set-tablero-posicion-cambiar! tab "0"))]
+          [(and (string=? (tablero-posicion-cambiar tab) "9") (member k '("5" "6" "8")) (eq? (posicion-ocupado (encontrar-posicion tab k)) #f))
+           (begin (set-posicion-ocupado! (encontrar-posicion tab k) #t)
+                  (set-posicion-color! (encontrar-posicion tab k) (tablero-color-jugador tab))
+                  (if (string=? (tablero-color-jugador tab) "red")
+                      (set-tablero-lista-rojas! tab (remove (string-numero (tablero-posicion-cambiar tab)) (tablero-lista-rojas tab)))
+                      (set-tablero-lista-azules! tab (remove (string-numero (tablero-posicion-cambiar tab)) (tablero-lista-azules tab))))
+                  (if (string=? (tablero-color-jugador tab) "red")
+                      (set-tablero-lista-rojas! tab (cons (string-numero k) (tablero-lista-rojas tab)))
+                      (set-tablero-lista-azules! tab (cons (string-numero k) (tablero-lista-azules tab))))
+                  (if (string=? (tablero-color-jugador tab) "red")
+                      (set-tablero-color-jugador! tab "blue")
+                      (set-tablero-color-jugador! tab "red"))
+                  (set-tablero-posicion-cambiar! tab "0"))]
+          )) tab)     
+
+
+#|
+   Se define la funcion para escoger al jugador que iniciara la partida. Se da por iniciada la partida y se
+   establece, en el tablero, el color de jugador del primer turno.
+   Entradas: El tablero 
+   Salidas: El tablero actualizado
+|#
+(define (jugar-inicial tab k) (if (string=? k "1") (begin (set-tablero-iniciado! tab #t) (set-tablero-color-jugador! tab "red")) tab)
+                              (if (string=? k "2") (begin (set-tablero-iniciado! tab #t) (set-tablero-color-jugador! tab "blue")) tab)
+                              tab) 
+
+#|
+   Se define la funcion para jugar. Primero se verifica si hay un ganador. En caso de no haberlo se verifica
+   si ya se colocaron todas las fichas. Si no se han colocado todas, se procede a colocar las fichas restantes.
+   Primero, se verifica si se debe mostrar la pantalla inicial, donde se escogerá el jugador a iniciar.
+   En caso de que ya se establecieron todas las fichas, y el jugador inicial, se procede a mover alguna de las fichas.
+   En caso de que ya haya un ganador el tablero se mantendrá en su ultimo estado, lo que da por terminado el
+   juego.
+   Entradas: El tablero y la tecla entrante
+   Salidas: El tablero actualizado
+|#
+(define (jugar tab k)
+  (verificar-ganador tab)
+  (cond [(eq? (tablero-iniciado tab) #f) (jugar-inicial tab k)] 
+        [(not(hay-ganador? tab))(if (< (tablero-fichas-colocadas tab) 6) (jugar-colocar tab k) (jugar-normal tab k))]
+        [else tab]))
+
+#|
+   Se define la funcion que ejecuta el juego.
+   Entradas: El tablero inicial
+   Salidas: El tablero actualizado
+|#
+(define (tapatan)
+  (big-bang mi-tablero
+  [to-draw dibujar-tablero]
+  [on-key jugar]))
